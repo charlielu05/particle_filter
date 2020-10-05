@@ -1,17 +1,18 @@
 include("pf_functions.jl")
 
-landmarks = [[-1 2]; [5 10]; [12 14]; [18 21]]
-N = 5000
-iters = 18
-sensor_std_err = .1 
-NL = size(landmarks)[1]
+function run_pf()
+    landmarks = [[-1 2]; [5 10]; [12 14]; [18 21]]
+    N = 5000
+    iters = 18
+    sensor_std_err = .1 
+    NL = size(landmarks)[1]
+    xs = []
+    ys = []
+    # create particles and weight
+    particles = create_uniform_particles((0,20), (0,20), (0,6.28), N)
+    particle_weights = ones(N) / N
+    robot_pos = [0. 0.]	
 
-# create particles and weight
-particles = create_uniform_particles((0,20), (0,20), (0,6.28), N)
-particle_weights = ones(N) / N
-robot_pos = [0. 0.]	
-
-function run_pf(landmarks, N, iters, sensor_std_err, NL, particles, particle_weights, robot_pos)
     for i in 1:iters
         robot_pos += [1. 1.]
         # distance from robot to each landmark
@@ -31,9 +32,9 @@ function run_pf(landmarks, N, iters, sensor_std_err, NL, particles, particle_wei
         append!(xs, mu[1])
         append!(ys, mu[2])
     end
-    return particles, particle_weights
+    return particles, particle_weights, xs, ys
 end
 
-particles_updated, weights_updated = run_pf(landmarks, N, iters, sensor_std_err, NL,
-particles, particle_weights, robot_pos)
-scatter(particles_updated[:,1], particles_updated[:,2])
+particles_updated, weights_updated, xs, ys = run_pf()
+#scatter(particles_updated[:,1], particles_updated[:,2])
+scatter(xs, ys)

@@ -25,7 +25,7 @@ function create_gaussian_particles(mean, std, N)
 	return particles
 end
 
-function predict(particles, u, std, dt=1.)
+function predict(particles, u, std, seed=0, dt=1.)
 	#move according to control input u tuple(heading change, velocity)
 	#with noise Q (std heading change, std velocity)
 	
@@ -33,10 +33,16 @@ function predict(particles, u, std, dt=1.)
 	N = size(particles, 1)
 	
 	# update heading 
+	if seed != 0
+		Random.seed!(seed)
+	end
 	particles[:, 3] .+= rand(Normal(u[1], std[1]), N)
 	particles[:, 3] .%= 2 * pi
 	
 	# move in the (noisy) commanded direction
+	if seed != 0
+		Random.seed!(seed)
+	end
 	dist = (u[2] * dt) .+ (randn(N) * std[2])
 	particles[:, 1] .+= cos.(particles[:, 3]) .* dist
 	particles[:, 2] .+= sin.(particles[:, 3]) .* dist
@@ -45,18 +51,19 @@ function predict(particles, u, std, dt=1.)
 end
 
 function update(particles, particle_weights, z, R, landmarks)
-	global particle_weights
+	updated_weights = particle_weights
+
 	for (i, landmark) in enumerate(eachrow(landmarks))
 		# for each landmark calculate the distance/norm for each particle to landmark
-		distance = map(norm, eachslice(particles[:, 1:2] .- landmarks[1,:]' ,dims=1))
+		distance = map(norm, eachslice(particles[:, 1:2] .- landmark' ,dims=1))
 		# update particle weight by the probability of the observation to distance.
-		particle_weights .*= [pdf(Normal(m,R), z[i]) for m in distance]
+		updated_weights .*= [pdf(Normal(m,R), z[i]) for m in distance]
 	end
-	
-	particle_weights .+= 1.e-300
-	particle_weights ./= sum(particle_weights)
 
-	return particle_weights
+	updated_weights .+= 1.e-300
+	updated_weights ./= sum(updated_weights)
+
+	return updated_weights
 end
 
 function estimate(particles, particle_weights_input)
@@ -83,6 +90,31 @@ end
 
 function neff(particle_weights)
 	return 1. / sum(particle_weights .^2)
+end
+
+function systematic_resample(weights)
+	N = size(weights)[1]
+
+	# make N subdivisions, and choose positions with a consistent random offset
+	positions = collect(range(0, step=1, length=N) .+ rand()) / N
+	println(positions)
+	# zero array of type Int8
+	indexes = zeros(Int8, N)
+	
+	# cumulative sum along the rows
+	cumulative_sum = cumsum(weights, dims=1)
+	println(cumulative_sum)
+	i = 1
+	j = 1
+	while i < N + 1
+		if positions[i] < cumulative_sum[j]
+			indexes[i] = j -1
+			i += 1
+		else  
+			j += 1
+		end
+	end
+	return indexes
 end
 
 function resample_from_index(particles, particle_weights, indexes)
