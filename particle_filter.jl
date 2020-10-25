@@ -8,6 +8,7 @@ function run_pf()
     NL = size(landmarks)[1]
     xs = []
     ys = []
+    actual_pos = []
     # create particles and weight
     particles = create_uniform_particles((0,20), (0,20), (0,6.28), N)
     particle_weights = ones(N) / N
@@ -26,15 +27,19 @@ function run_pf()
         particle_weights = update(particles, particle_weights, zs, sensor_std_err, landmarks) 
 
         # resample if too few effective particles
-        #if neff(particle_weights) < N / 2
-
+        if neff(particle_weights) < N / 2
+            indexes = systematic_resample(particle_weights)
+            particles, particle_weights = resample_from_index(particles, particle_weights, indexes)
+        end
         mu, var = estimate(particles, particle_weights)
         append!(xs, mu[1])
         append!(ys, mu[2])
+        append!(actual_pos, [robot_pos])
     end
-    return particles, particle_weights, xs, ys
+    return particles, particle_weights, xs, ys, actual_pos
 end
 
-particles_updated, weights_updated, xs, ys = run_pf()
+particles_updated, weights_updated, xs, ys, actual_pos = run_pf()
 #scatter(particles_updated[:,1], particles_updated[:,2])
-scatter(xs, ys)
+scatter(xs, ys, label = "predicted")
+scatter!(getindex.(actual_pos, 1), getindex.(actual_pos, 2), label = "actual")

@@ -63,7 +63,17 @@ end
 
 function check_systematic_resample()
     test_weight = range(0, stop=1, step=.2)
-    @test systematic_resample(test_weight) == [1 2 2 3 3 3]
+    @test systematic_resample(test_weight) == [2,3, 3, 4, 4, 4]
+end
+
+function check_resample_from_index()
+    particles = [[1 1]; [2 2]; [3 3]; [4 4]]
+    particle_weights = [.9, .9, .9, .9]
+    index = [3, 3, 3, 3]
+    
+    particles, particle_weights= resample_from_index(particles, particle_weights, index)
+    @test particles == [[3 3]; [3 3]; [3 3]; [3 3]]
+    @test particle_weights == [.25, .25, .25, .25]
 end
 
 check_foo()
@@ -73,3 +83,4 @@ check_update_function()
 check_estimate_function()
 check_neff_function()
 check_systematic_resample()
+check_resample_from_index()

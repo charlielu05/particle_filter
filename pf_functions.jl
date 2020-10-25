@@ -97,18 +97,16 @@ function systematic_resample(weights)
 
 	# make N subdivisions, and choose positions with a consistent random offset
 	positions = collect(range(0, step=1, length=N) .+ rand()) / N
-	println(positions)
-	# zero array of type Int8
-	indexes = zeros(Int8, N)
+	# zero array of type Int16
+	indexes = zeros(Int16, N)
 	
 	# cumulative sum along the rows
 	cumulative_sum = cumsum(weights, dims=1)
-	println(cumulative_sum)
 	i = 1
 	j = 1
-	while i < N + 1
+	while i < N + 1 
 		if positions[i] < cumulative_sum[j]
-			indexes[i] = j -1
+			indexes[i] = j
 			i += 1
 		else  
 			j += 1
@@ -118,5 +116,9 @@ function systematic_resample(weights)
 end
 
 function resample_from_index(particles, particle_weights, indexes)
-	particles = particles[indexes]
+	particles[:] = particles[indexes,:]
+	weights_length = size(particle_weights)[1]
+	particle_weights = fill(1/weights_length, (weights_length,))
+
+	return particles, particle_weights
 end
